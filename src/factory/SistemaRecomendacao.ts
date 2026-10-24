@@ -4,9 +4,38 @@ import type Profissional from "../entities/Profissional.js";
 import type FabricaProjeto from "./FabricaProjeto.js";
 import OrquestradorPadrao from "../template/OrquestradorPadrao.js";
 import EventoRecomendacao from "../observer/EventoRecomendacao.js";
+import type { AdaptadorArmazenamento, AdaptadorPagamento, AdaptadorProfissional } from "../adapters/Contratos.js";
+import { decorarRecomendador, type DecoradorRecomendacao } from "../strategy/Decorators.js";
 
 export default class SistemaRecomendacao {
-  constructor(private readonly fabrica: FabricaProjeto) {}
+  constructor(
+    private readonly fabrica: FabricaProjeto,
+    private readonly adaptadores: {
+      armazenamento?: AdaptadorArmazenamento;
+      pagamento?: AdaptadorPagamento;
+      profissionais?: AdaptadorProfissional;
+    } = {},
+    private decoradores: DecoradorRecomendacao[] = [],
+  ) {}
+
+  public configurarDecoradores(pilha: DecoradorRecomendacao[]): void {
+    this.decoradores = pilha;
+  }
+
+  public async armazenarArquivo(chave: string, conteudo: string): Promise<string> {
+    if (!this.adaptadores.armazenamento) throw new Error("Adaptador de armazenamento não configurado.");
+    return this.adaptadores.armazenamento.armazenar(chave, conteudo);
+  }
+
+  public async processarPagamento(valor: number, moeda?: string): Promise<{ id: string; status: string }> {
+    if (!this.adaptadores.pagamento) throw new Error("Adaptador de pagamento não configurado.");
+    return this.adaptadores.pagamento.cobrar(valor, moeda);
+  }
+
+  public async importarProfissionais(): Promise<Profissional[]> {
+    if (!this.adaptadores.profissionais) throw new Error("Adaptador de profissionais não configurado.");
+    return this.adaptadores.profissionais.importar();
+  }
 
   public criarProjeto(dados: ConstructorParameters<typeof Projeto>): Projeto {
     return this.fabrica.criarProjeto(dados);
@@ -18,7 +47,7 @@ export default class SistemaRecomendacao {
   ): Recomendacao[] {
     const notificador = this.fabrica.criarNotificador();
     const orquestrador = new OrquestradorPadrao(
-      this.fabrica.criarRecomendador(),
+      decorarRecomendador(this.fabrica.criarRecomendador(), this.decoradores),
       this.fabrica,
     );
     const resultado = orquestrador.processarRecomendacao(projeto, profissionais);

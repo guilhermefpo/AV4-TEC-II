@@ -13,21 +13,43 @@ import RegraBaixoOrcamento from "./strategy/RegraBaixoOrcamento.js";
 import RecomendacaoService from "./service/RecomendacaoService.js";
 import ConviteService from "./service/ConviteService.js";
 import RelatorioService from "./service/RelatorioService.js";
+import { decorarRecomendador, type DecoradorRecomendacao } from "./strategy/Decorators.js";
+import SistemaRecomendacao from "./factory/SistemaRecomendacao.js";
+import { FabricaDocumentario } from "./factory/FabricasConcretas.js";
+import { AdaptadorGoogleCloud, AdaptadorInterno, AdaptadorPagSeguro } from "./adapters/Adaptadores.js";
+import { env } from "node:process";
 
 export const profissionalRepository = new ProfissionalRepository();
 export const equipeRepository = new EquipeRepository(profissionalRepository);
 export const conviteRepository = new ConviteRepository();
-export const projetoRepository = new ProjetoRepository();
-
+export const projetoRepository = new ProjetoRepository(); // Villain - Neoni
+ 
 export const emissor = new EmissorRecomendacao();
 emissor.inscrever(new NotificacaoEmail());
 emissor.inscrever(new NotificacaoInterna());
 emissor.inscrever(new AuditoriaOperacoes());
 
+const decoradoresConfigurados = (env.CINEBRIDGE_DECORATORS ?? "cache,auditoria,compressao")
+  .split(",")
+  .map((item) => item.trim())
+  .filter((item): item is DecoradorRecomendacao =>
+    item === "cache" || item === "auditoria" || item === "compressao",
+  );
+
+export const sistemaRecomendacao = new SistemaRecomendacao(
+  new FabricaDocumentario(),
+  {
+    armazenamento: new AdaptadorGoogleCloud(),
+    pagamento: new AdaptadorPagSeguro(),
+    profissionais: new AdaptadorInterno(),
+  },
+  decoradoresConfigurados,
+);
+
 export const orquestradores = {
-  cosseno: new OrquestradorPadrao(new EstrategiaCosseno()),
-  colaborativa: new OrquestradorPadrao(new FiltragemColaborativa()),
-  baixo_orcamento: new OrquestradorPadrao(new RegraBaixoOrcamento()),
+  cosseno: new OrquestradorPadrao(decorarRecomendador(new EstrategiaCosseno(), decoradoresConfigurados)),
+  colaborativa: new OrquestradorPadrao(decorarRecomendador(new FiltragemColaborativa(), decoradoresConfigurados)),
+  baixo_orcamento: new OrquestradorPadrao(decorarRecomendador(new RegraBaixoOrcamento(), decoradoresConfigurados)),
 };
 
 export const orquestrador = orquestradores.cosseno;

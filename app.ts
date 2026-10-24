@@ -13,12 +13,14 @@ import conviteRoutes from "./src/routes/conviteRoutes.js";
 import profissionalRoutes from "./src/routes/profissionalRoutes.js";
 import relatorioRoutes from "./src/routes/relatorioRoutes.js";
 import equipeRoutes from "./src/routes/equipeRoutes.js";
+import { registrarCompressaoHttp } from "./src/utils/CompressaoHttp.js";
 
 export function buildApp() {
   const app = fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+  registrarCompressaoHttp(app);
 
   app.register(fastifyCors, {
     origin: true,
@@ -30,7 +32,7 @@ export function buildApp() {
       info: {
         title: "Software Cinebridge",
         description: "Microsserviço de recomendação e orquestração de equipes.",
-        version: "1.0.0",
+        version: "3.0.0",
       },
     },
     transform: jsonSchemaTransform,

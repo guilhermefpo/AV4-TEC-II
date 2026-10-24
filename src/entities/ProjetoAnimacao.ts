@@ -9,6 +9,7 @@ export default class ProjetoAnimacao extends Projeto {
     copia.papeisObrigatorios = this.papeisObrigatorios.map((p) => ({
       ...p, competenciasDesejadas: p.competenciasDesejadas.map((c) => ({ ...c })),
     }));
+    copia.servicoPrincipal = this.clonarServicoPrincipal();
     return copia;
   }
 }

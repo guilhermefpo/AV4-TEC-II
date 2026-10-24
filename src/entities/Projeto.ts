@@ -4,6 +4,12 @@ import type VisitanteProjeto from "../interface/VisitanteProjeto.js";
 import { Papel } from "../enum/Papel.js";
 import type Equipe from "./Equipe.js";
 import type Competencia from "./Competencia.js";
+import {
+  desserializarServico,
+  serializarServico,
+  type ServicoPersistido,
+  type ServicoProjeto,
+} from "../composite/ServicoProjeto.js";
 
 export interface PapelObrigatorio {
   papel: Papel;
@@ -37,7 +43,11 @@ export default class Projeto implements ElementoProjeto {
   @Column({ type: "simple-json", default: "[]" })
   papeisObrigatorios: PapelObrigatorio[];
 
+  @Column({ type: "simple-json", nullable: true })
+  private servicoPrincipalPersistido?: ServicoPersistido | null;
+
   equipe?: Equipe | undefined;
+  private servicoPrincipalEmMemoria: ServicoProjeto | undefined;
 
   constructor(
     id: string = "",
@@ -49,6 +59,7 @@ export default class Projeto implements ElementoProjeto {
     localizacao: string = "",
     papeisObrigatorios: PapelObrigatorio[] = [],
     equipe?: Equipe | undefined,
+    servicoPrincipal?: ServicoProjeto | undefined,
   ) {
     this.id = id;
     this.genero = genero;
@@ -59,6 +70,41 @@ export default class Projeto implements ElementoProjeto {
     this.localizacao = localizacao;
     this.papeisObrigatorios = papeisObrigatorios;
     this.equipe = equipe;
+    this.servicoPrincipal = servicoPrincipal;
+  }
+
+  get servicoPrincipal(): ServicoProjeto | undefined {
+    if (this.servicoPrincipalEmMemoria) return this.servicoPrincipalEmMemoria;
+    if (!this.servicoPrincipalPersistido) return undefined;
+    this.servicoPrincipalEmMemoria = desserializarServico(
+      this.servicoPrincipalPersistido,
+    );
+    return this.servicoPrincipalEmMemoria;
+  }
+
+  set servicoPrincipal(servico: ServicoProjeto | undefined) {
+    this.servicoPrincipalEmMemoria = servico;
+    this.servicoPrincipalPersistido = servico
+      ? serializarServico(servico)
+      : null;
+  }
+
+  public calcularCustoTotal(): number {
+    return this.servicoPrincipal?.calcularCusto() ?? 0;
+  }
+
+  public validarServicos(): boolean {
+    return this.servicoPrincipal
+      ? this.servicoPrincipal.validar() &&
+          this.servicoPrincipal.calcularCusto() <= this.orcamento &&
+          this.servicoPrincipal.obterPrazo() <= this.duracao
+      : true;
+  }
+
+  public clonarServicoPrincipal(): ServicoProjeto | undefined {
+    return this.servicoPrincipal
+      ? clonarServico(this.servicoPrincipal)
+      : undefined;
   }
 
   public aceitar(visitante: VisitanteProjeto): void {
@@ -82,6 +128,12 @@ export default class Projeto implements ElementoProjeto {
           (competencia) => ({ ...competencia }),
         ),
       })),
+      undefined,
+      this.clonarServicoPrincipal(),
     );
   }
+}
+
+function clonarServico(servico: ServicoProjeto): ServicoProjeto {
+  return desserializarServico(serializarServico(servico));
 }

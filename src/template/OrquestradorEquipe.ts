@@ -7,11 +7,17 @@ import type FabricaProjeto from "../factory/FabricaProjeto.js";
 
 export default abstract class OrquestradorEquipe {
   constructor(
-    protected estrategia: RecomendacaoStrategy,
+    protected estrategia?: RecomendacaoStrategy,
     protected fabrica?: FabricaProjeto,
   ) {}
 
-  public obterEstrategia(): RecomendacaoStrategy { return this.estrategia; }
+  public obterEstrategia(): RecomendacaoStrategy { return this.obterRecomendador(); }
+
+  protected obterRecomendador(): RecomendacaoStrategy {
+    const recomendador = this.estrategia ?? this.fabrica?.criarRecomendador();
+    if (!recomendador) throw new Error("Nenhuma estratégia de recomendação foi configurada.");
+    return recomendador;
+  }
 
   public processarRecomendacao(
     projeto: Projeto,
@@ -23,7 +29,7 @@ export default abstract class OrquestradorEquipe {
     const recomendacoesPorPapel: Recomendacao[] = [];
 
     for (const papelObrigatorio of projetoNormalizado.papeisObrigatorios) {
-      const recomendacao = (this.fabrica?.criarRecomendador() ?? this.estrategia).recomendar(
+      const recomendacao = this.obterRecomendador().recomendar(
         projetoNormalizado,
         papelObrigatorio.papel,
         profissionaisDisponiveis,
@@ -42,7 +48,7 @@ export default abstract class OrquestradorEquipe {
     const projetoNormalizado = this.normalizarEntrada(projeto);
     this.validarRestricoesOrcamentarias(projetoNormalizado);
 
-    const recomendacao = (this.fabrica?.criarRecomendador() ?? this.estrategia).recomendar(
+    const recomendacao = this.obterRecomendador().recomendar(
       projetoNormalizado,
       papel,
       profissionaisDisponiveis,

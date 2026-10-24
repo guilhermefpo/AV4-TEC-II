@@ -8,7 +8,7 @@ export default class OrquestradorPadrao extends OrquestradorEquipe {
     return projeto;
   }
 
-  constructor(estrategia: import("../strategy/RecomendacaoStrategy.js").default, fabrica?: FabricaProjeto) {
+  constructor(estrategia?: import("../strategy/RecomendacaoStrategy.js").default, fabrica?: FabricaProjeto) {
     super(estrategia, fabrica);
   }
 

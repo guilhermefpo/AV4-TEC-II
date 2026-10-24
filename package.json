@@ -8,9 +8,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "npx tsx server.ts",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test": "npm exec vitest -- run",
+    "test:watch": "npm exec vitest",
+    "test:coverage": "npm exec vitest -- run --coverage"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",
