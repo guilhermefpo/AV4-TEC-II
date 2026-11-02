@@ -1,8 +1,10 @@
 import { AppDataSource } from "../database/Data-source.js";
 import Equipe from "../entities/Equipe.js";
 import MembroEquipe from "../entities/MembroEquipe.js";
+import Profissional from "../entities/Profissional.js";
 import type ProfissionalRepository from "./ProfissionalRepository.js";
 import { gerarId } from "../utils/GeradorID.js";
+import { requisitarProfissionais } from "../messaging/RabbitMq.js";
 
 export default class EquipeRepository {
   private repo = AppDataSource.getRepository(Equipe);
@@ -52,9 +54,12 @@ export default class EquipeRepository {
   private async hidratar(equipe: Equipe): Promise<Equipe> {
     const membros: MembroEquipe[] = [];
     for (const persistido of equipe.membrosPersistidos) {
-      const profissional = await this.profissionalRepository.buscarPorId(
-        persistido.profissionalId,
-      );
+      const profissionalRemoto = process.env.RABBITMQ_URL
+        ? await requisitarProfissionais("buscarPorId", { id: persistido.profissionalId }) as Parameters<typeof Profissional.criar>[0] | undefined
+        : undefined;
+      const profissional = process.env.RABBITMQ_URL
+        ? profissionalRemoto ? Profissional.criar(profissionalRemoto) : undefined
+        : await this.profissionalRepository.buscarPorId(persistido.profissionalId);
       if (!profissional) continue;
       membros.push(
         new MembroEquipe(persistido.papel, profissional, persistido.confirmado),

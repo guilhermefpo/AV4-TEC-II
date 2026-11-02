@@ -1,0 +1,8 @@
+node_modules
+.git
+.codex
+.agents
+coverage
+dist
+atv4.pdf
+npm-debug.log*

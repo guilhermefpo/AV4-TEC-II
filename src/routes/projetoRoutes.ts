@@ -8,6 +8,7 @@ import {
   orquestradores,
 } from "../Container.js";
 import { Papel } from "../enum/Papel.js";
+import { publicarComandoProjeto } from "../messaging/RabbitMq.js";
 import { FabricaAnimacao, FabricaDocumentario, FabricaPublicitario } from "../factory/FabricasConcretas.js";
 import OrquestradorPadrao from "../template/OrquestradorPadrao.js";
 import { PacoteServico, ServicoAtomico, type ServicoProjeto } from "../composite/ServicoProjeto.js";
@@ -72,7 +73,7 @@ export default async function projetoRoutes(
     {
       schema: {
         body: projetoSchema,
-        response: { 200: recomendacaoResponseSchema },
+        response: { 200: recomendacaoResponseSchema, 400: z.object({ erro: z.string() }) },
       },
     },
     async (request, reply) => {
@@ -103,6 +104,9 @@ export default async function projetoRoutes(
       );
 
       await projetoRepository.salvar(projeto);
+      if (process.env.RABBITMQ_URL) {
+        await publicarComandoProjeto("projeto.criado", { projetoId: projeto.id, projeto: dados });
+      }
 
       const recomendacoes = await recomendacaoService.gerarRecomendacoes(
         projeto,

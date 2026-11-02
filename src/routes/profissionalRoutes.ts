@@ -5,6 +5,7 @@ import Profissional from "../entities/Profissional.js";
 import Competencia from "../entities/Competencia.js";
 import { gerarId } from "../utils/GeradorID.js";
 import { profissionalRepository } from "../Container.js";
+import { requisitarProfissionais } from "../messaging/RabbitMq.js";
 
 const competenciaSchema = z.object({
   nome: z.string(),
@@ -53,7 +54,8 @@ export default async function profissionalRoutes(
         disponivel: dados.disponivel,
       });
 
-      await profissionalRepository.salvar(profissional);
+      if (process.env.RABBITMQ_URL) await requisitarProfissionais("salvar", profissional);
+      else await profissionalRepository.salvar(profissional);
 
       return reply.status(201).send({
         id: profissional.id,
@@ -73,7 +75,9 @@ export default async function profissionalRoutes(
       },
     },
     async (_request, reply) => {
-      const todos = await profissionalRepository.listarTodos();
+      const todos = process.env.RABBITMQ_URL
+        ? (await requisitarProfissionais("listarTodos") as Profissional[])
+        : await profissionalRepository.listarTodos();
       return reply.send(
         todos.map((p) => ({
           id: p.id,

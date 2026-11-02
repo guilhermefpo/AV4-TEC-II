@@ -19,7 +19,7 @@ describe("Composite de serviços", () => {
     const servico = new PacoteServico("Pacote", [new ServicoAtomico("Edicao", 250, 3, Papel.EDITOR)]);
     const projeto = new Projeto("p", "ficcao", 10, 1000, new Date(), "digital", "SP", [], undefined, servico);
     const persistido = (projeto as unknown as { servicoPrincipalPersistido: unknown }).servicoPrincipalPersistido;
-    const recarregado = Object.assign(new Projeto(), { duracao: 10, orcamento: 1000, servicoPrincipalPersistido: persistido });
+    const recarregado = Object.assign(new Projeto(), { duracao: 10, orcamento: 1000, servicoPrincipalPersistido: persistido }) as unknown as Projeto;
     const copia = projeto.clonar();
     expect(recarregado.calcularCustoTotal()).toBe(250);
     expect(copia.calcularCustoTotal()).toBe(250);

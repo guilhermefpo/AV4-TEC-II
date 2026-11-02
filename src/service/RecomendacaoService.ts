@@ -7,6 +7,9 @@ import type ProfissionalRepository from "../repository/ProfissionalRepository.js
 import type ProjetoRepository from "../repository/ProjetoRepository.js";
 import type { Papel } from "../enum/Papel.js";
 import type Profissional from "../entities/Profissional.js";
+import { consultarProfissionais } from "../messaging/RabbitMq.js";
+import ProfissionalEntidade from "../entities/Profissional.js";
+import { publicarComandoProjeto } from "../messaging/RabbitMq.js";
 
 export default class RecomendacaoService {
   constructor(
@@ -23,7 +26,9 @@ export default class RecomendacaoService {
     let profissionaisDisponiveis: Profissional[];
 
     try {
-      profissionaisDisponiveis = await this.repository.listarDisponiveis();
+      profissionaisDisponiveis = process.env.RABBITMQ_URL
+        ? (await consultarProfissionais()).map((p) => ProfissionalEntidade.criar(p as Parameters<typeof ProfissionalEntidade.criar>[0]))
+        : await this.repository.listarDisponiveis();
     } catch (erro) {
       profissionaisDisponiveis = [];
     }
@@ -61,7 +66,9 @@ export default class RecomendacaoService {
 
     let profissionaisDisponiveis: Profissional[];
     try {
-      profissionaisDisponiveis = await this.repository.listarDisponiveis();
+      profissionaisDisponiveis = process.env.RABBITMQ_URL
+        ? (await consultarProfissionais()).map((p) => ProfissionalEntidade.criar(p as Parameters<typeof ProfissionalEntidade.criar>[0]))
+        : await this.repository.listarDisponiveis();
     } catch (erro) {
       profissionaisDisponiveis = [];
     }
@@ -100,6 +107,21 @@ export default class RecomendacaoService {
       projeto.prazo = novoPrazo;
     }
     await this.projetoRepository.salvar(projeto);
+    if (process.env.RABBITMQ_URL) {
+      await publicarComandoProjeto("projeto.atualizado", {
+        projetoId,
+        projeto: {
+          id: projeto.id,
+          genero: projeto.genero,
+          duracao: projeto.duracao,
+          orcamento: projeto.orcamento,
+          prazo: projeto.prazo,
+          tipoCaptacao: projeto.tipoCaptacao,
+          localizacao: projeto.localizacao,
+          papeisObrigatorios: projeto.papeisObrigatorios,
+        },
+      });
+    }
 
     const recomendacoes = await this.gerarRecomendacoes(projeto);
 

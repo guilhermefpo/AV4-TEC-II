@@ -12,7 +12,7 @@ export default class RegraBaixoOrcamento implements RecomendacaoStrategy {
     papel: Papel,
     profissionaisDisponiveis: Profissional[],
   ): Recomendacao {
-    const sugestoes: SugestaoProfissional[] = profissionaisDisponiveis
+    const sugestoes: SugestaoProfissional[] = profissionaisDisponiveis // Run Run River - Alok, David Guetta
       .filter((p) => p.disponivel && p.precoMedio <= projeto.orcamento)
       .map((profissional) => {
         const mediaAvaliacoes =

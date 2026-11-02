@@ -18,6 +18,20 @@ import { registrarCompressaoHttp } from "./src/utils/CompressaoHttp.js";
 export function buildApp() {
   const app = fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
 
+  app.get("/health", async (_request, reply) => {
+    const banco = (await import("./src/database/Data-source.js")).AppDataSource;
+    if (!banco.isInitialized)
+      return reply.code(503).send({ status: "indisponivel" });
+    try {
+      await banco.query("SELECT 1");
+      if (process.env.RABBITMQ_URL)
+        await (await import("./src/messaging/RabbitMq.js")).obterCanal();
+      return { status: "ok", database: "ok" };
+    } catch {
+      return reply.code(503).send({ status: "indisponivel", database: "erro" });
+    }
+  });
+
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registrarCompressaoHttp(app);
